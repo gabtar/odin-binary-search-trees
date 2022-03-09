@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-require 'pry-byebug'
-
+# require 'pry-byebug'
 require_relative './tree_node'
 require_relative './value_already_exits'
 
@@ -10,12 +9,17 @@ require_relative './value_already_exits'
 class Tree
   attr_accessor :root
 
+  ##
+  # Creates a new Tree object from +array+ or
+  # returns a default empty tree structure
   def initialize(array = [])
     @root = build_tree(array)
   end
 
+  ##
+  # Builds a balanced binary tree from +array+
   def build_tree(array)
-    array.sort!.uniq! # TODO, find another way?
+    array.sort!.uniq!
     return nil if array.empty?
 
     mid = (array.length / 2).floor
@@ -24,10 +28,14 @@ class Tree
     root.left = build_tree(array.slice(0, mid))
     root.right = build_tree(array.slice(mid + 1, array.length))
 
-    @root = root
+    root
   end
 
-  def insert(value, current_node = @root)
+  ##
+  # Inserts a new node with +value+ in the current tree
+  # Raises a ValueAlreadyExists if there is already a node
+  # that contains +value+
+  def insert(value, current_node = root)
     raise ValueAlreadyExists if find(value)
 
     return TreeNode.new(value) if current_node.nil?
@@ -40,27 +48,31 @@ class Tree
     current_node
   end
 
-  def delete(value, current_node = @root)
+  ##
+  # Deletes +value+ in the current tree
+  # If node is not a leaf node, rearanges the tree
+  # deleting only +value+
+  def delete(value, current_node = root)
     return nil if current_node.nil?
 
     if value > current_node.value
       current_node.right = delete(value, current_node.right)
     elsif value < current_node.value
       current_node.left = delete(value, current_node.left)
+    elsif current_node.right.nil?
+      current_node = current_node.left
+    elsif current_node.left.nil?
+      current_node = current_node.right
     else
-      if current_node.right.nil?
-        current_node = current_node.left
-      elsif current_node.left.nil?
-        current_node = current_node.right
-      else
-        current_node.value = min_value_of_subtree(current_node.right).value
-        current_node.right = delete(current_node.value, current_node.right)
-      end
+      current_node.value = min_value_of_subtree(current_node.right).value
+      current_node.right = delete(current_node.value, current_node.right)
     end
     current_node
   end
 
-  def find(value, current_node = @root)
+  ##
+  # Finds +value+ in the current tree
+  def find(value, current_node = root)
     return nil if current_node.nil?
 
     if value == current_node.value
@@ -72,7 +84,10 @@ class Tree
     end
   end
 
-  def level_order(current_node = @root)
+  ##
+  # Returns an array with in breadth-first level order of the tree
+  # If a block if passed, it yields each node to the provided block
+  def level_order(current_node = root)
     queue = []
     level_order = [] unless block_given?
 
@@ -89,7 +104,10 @@ class Tree
     level_order
   end
 
-  def preorder(current_node = @root, preorder = [], &block)
+  ##
+  # Returns an array with depth-first preorder of the tree
+  # If a block if passed, it yields each node to the provided block
+  def preorder(current_node = root, preorder = [], &block)
     return nil if current_node.nil?
 
     block ? yield(current_node) : preorder << current_node.value
@@ -99,7 +117,10 @@ class Tree
     preorder
   end
 
-  def inorder(current_node = @root, inorder = [], &block)
+  ##
+  # Returns an array with depth-first inorder of the tree
+  # If a block if passed, it yields each node to the provided block
+  def inorder(current_node = root, inorder = [], &block)
     return nil if current_node.nil?
 
     inorder(current_node.left, inorder, &block)
@@ -109,7 +130,10 @@ class Tree
     inorder
   end
 
-  def postorder(current_node = @root, postorder = [], &block)
+  ##
+  # Returns an array with depth-first postorder of the tree
+  # If a block if passed, it yields each node to the provided block
+  def postorder(current_node = root, postorder = [], &block)
     return nil if current_node.nil?
 
     postorder(current_node.left, postorder, &block)
@@ -119,6 +143,8 @@ class Tree
     postorder
   end
 
+  ##
+  # Returns the height of the given +node+
   def height(node)
     return 0 if node.nil?
 
@@ -128,9 +154,40 @@ class Tree
     [right_height, left_height].max + 1
   end
 
-  def depth(node)
+  ##
+  # Returns the depth of the given +node+ with respect to root node
+  def depth(node, current_node = root)
+    current_depth = 0
+
+    # Check if value is higher or lower than current node value
+    # break when node found
+    until current_node == node
+      if node > current_node
+        current_node = current_node.right
+      elsif node < current_node
+        current_node = current_node.left
+      end
+      current_depth += 1
+    end
+    current_depth
   end
 
+  ##
+  # Returns true if the current tree is balanced
+  # otherwise returns false
+  def balanced?
+    (height(root.left) - height(root.right)).between?(-1, 1)
+  end
+
+  ##
+  # Rebalances current tree
+  def rebalance!
+    current_tree = level_order
+    build_tree(current_tree)
+  end
+
+  ##
+  # Prints the tree in terminal
   def pretty_print(node = @root, prefix = '', is_left = true)
     pretty_print(node.right, "#{prefix}#{is_left ? '│   ' : '    '}", false) if node.right
     puts "#{prefix}#{is_left ? '└── ' : '┌── '}#{node.value}"
@@ -139,6 +196,8 @@ class Tree
 
   private
 
+  ##
+  # Returs the minimum value of the subtree +node+
   def min_value_of_subtree(node)
     current_node = node
     current_node = current_node.left until current_node.left.nil?
@@ -146,16 +205,18 @@ class Tree
   end
 end
 
-tree = Tree.new([1, 2, 3, 5])
+# Test
+# tree = Tree.new([1, 2, 3])
 # tree = Tree.new([1, 3, 6, 7, 8, 10, 14])
-
-# p tree.find(2)
-#
 # p tree.find(8)
-tree.insert(6)
-tree.insert(4)
-tree.pretty_print
-p tree.level_order
+# tree.insert(6)
+# tree.insert(4)
+# tree.insert(5)
+# tree.pretty_print
+# p tree.level_order
+# p tree.balanced?
+# tree.rebalance!
+# tree.pretty_print
 # p tree.postorder
 # tree.delete(1)
 # puts tree.pretty_print

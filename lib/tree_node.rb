@@ -16,8 +16,4 @@ class TreeNode
   def <=>(other)
     @value <=> other.value
   end
-
-  def last?
-    left.nil? && right.nil?
-  end
 end
